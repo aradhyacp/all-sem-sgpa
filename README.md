@@ -4,11 +4,13 @@ This repository contains all of my end-semester result sheets. And tracks CGPA b
 
 ## Current CGPA
 
-**CGPA: Calculating...**
+**CGPA: 9.32**
 
-_(CGPA will be automatically updated when you push to the repository)_
+_(Based on 4 semester(s))_
 
 ---
+*Last updated: 2026-02-02 12:36:30 UTC*
+
 
 ## How it works
 
