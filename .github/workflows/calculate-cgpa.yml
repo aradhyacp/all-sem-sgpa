@@ -1,0 +1,143 @@
+name: Calculate CGPA
+
+on:
+  push:
+    branches:
+      - main
+      - master
+  workflow_dispatch:
+
+jobs:
+  calculate-cgpa:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+      
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install PyPDF2
+      
+      - name: Extract SGPA and Calculate CGPA
+        id: calculate
+        run: |
+          python3 << 'EOF'
+          import PyPDF2
+          import re
+          import os
+          from pathlib import Path
+          
+          # Find all PDF files starting with the specified pattern
+          pdf_files = sorted(Path('.').glob('Exam_Result_Sheet_dsce_sem*.pdf'))
+          
+          sgpa_values = []
+          
+          for pdf_file in pdf_files:
+              print(f"Processing: {pdf_file}")
+              try:
+                  with open(pdf_file, 'rb') as file:
+                      pdf_reader = PyPDF2.PdfReader(file)
+                      text = ''
+                      for page in pdf_reader.pages:
+                          text += page.extract_text()
+                      
+                      # Search for SGPA pattern
+                      # Common patterns: "SGPA: 8.5", "SGPA = 8.5", "SGPA 8.5", etc.
+                      sgpa_pattern = r'SGPA[:\s=]+(\d+\.?\d*)'
+                      matches = re.findall(sgpa_pattern, text, re.IGNORECASE)
+                      
+                      if matches:
+                          sgpa = float(matches[0])
+                          sgpa_values.append(sgpa)
+                          print(f"  Found SGPA: {sgpa}")
+                      else:
+                          print(f"  No SGPA found in {pdf_file}")
+              except Exception as e:
+                  print(f"  Error processing {pdf_file}: {str(e)}")
+          
+          # Calculate CGPA
+          if sgpa_values:
+              cgpa = sum(sgpa_values) / len(sgpa_values)
+              print(f"\nTotal semesters: {len(sgpa_values)}")
+              print(f"SGPA values: {sgpa_values}")
+              print(f"Calculated CGPA: {cgpa:.2f}")
+              
+              # Save to environment file
+              with open(os.environ['GITHUB_OUTPUT'], 'a') as f:
+                  f.write(f"cgpa={cgpa:.2f}\n")
+                  f.write(f"semester_count={len(sgpa_values)}\n")
+          else:
+              print("No SGPA values found!")
+              with open(os.environ['GITHUB_OUTPUT'], 'a') as f:
+                  f.write("cgpa=N/A\n")
+                  f.write("semester_count=0\n")
+          EOF
+      
+      - name: Update README
+        run: |
+          # Create README.md if it doesn't exist
+          if [ ! -f README.md ]; then
+            cat > README.md << 'EOF'
+          # Academic Performance Tracker
+          
+          This repository tracks academic performance across semesters.
+          
+          ## Current CGPA
+          
+          **CGPA: ${{ steps.calculate.outputs.cgpa }}**
+          
+          _(Based on ${{ steps.calculate.outputs.semester_count }} semester(s))_
+          
+          ---
+          *Last updated: $(date '+%Y-%m-%d %H:%M:%S UTC')*
+          EOF
+          else
+            # Update existing README
+            if grep -q "## Current CGPA" README.md; then
+              # CGPA section exists, update it
+              sed -i '/## Current CGPA/,/^##\|^---/c\
+          ## Current CGPA\
+          \
+          **CGPA: ${{ steps.calculate.outputs.cgpa }}**\
+          \
+          _(Based on ${{ steps.calculate.outputs.semester_count }} semester(s))_\
+          \
+          ---\
+          *Last updated: '"$(date '+%Y-%m-%d %H:%M:%S UTC')"'*\
+          ' README.md
+            else
+              # CGPA section doesn't exist, append it
+              cat >> README.md << 'EOF'
+          
+          ## Current CGPA
+          
+          **CGPA: ${{ steps.calculate.outputs.cgpa }}**
+          
+          _(Based on ${{ steps.calculate.outputs.semester_count }} semester(s))_
+          
+          ---
+          *Last updated: $(date '+%Y-%m-%d %H:%M:%S UTC')*
+          EOF
+            fi
+          fi
+      
+      - name: Commit and push if changed
+        run: |
+          git config --global user.name 'github-actions[bot]'
+          git config --global user.email 'github-actions[bot]@users.noreply.github.com'
+          git add README.md
+          if git diff --staged --quiet; then
+            echo "No changes to commit"
+          else
+            git commit -m "Update CGPA in README [skip ci]"
+            git push
+          fi
