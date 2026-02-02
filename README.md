@@ -21,4 +21,3 @@ The GitHub Action workflow automatically:
 4. Updates this README with the current CGPA
 
 ---
-*Last updated: Pending first workflow run*
