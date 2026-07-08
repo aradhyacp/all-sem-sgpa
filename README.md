@@ -4,11 +4,13 @@ This repository contains all of my end-semester result sheets. And tracks CGPA b
 
 ## Current CGPA
 
-**CGPA: 9.17400**
+**CGPA: 9.12833**
 
-_(Based on 5 semester(s))_
+_(Based on 6 semester(s))_
 
 ---
+*Last updated: 2026-07-08 17:42:55 UTC*
+
 *Last updated: 2026-02-11 10:23:27 UTC*
 
 *Last updated: 2026-02-02 12:46:59 UTC*
